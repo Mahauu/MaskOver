@@ -9,6 +9,7 @@ MaskOver may not work perfectly, but it makes working on terrain masks much easi
 No hard-coded `P:\` map paths. On startup you choose an existing preset or create one. Each preset stores one editable working copy under `presets\<name>\` next to `MaskOver.exe`. The source mask, `layers.cfg` and satellite stay at their original paths and are never copied into the preset (except a one-time working copy of the mask).
 
 ---
+![photo2](docs/photo2.png)
 ![photo1](docs/photo1.png)
 ---
 
@@ -152,5 +153,5 @@ Freeware - Proprietary / All Rights Reserved.
 See [LICENSE.txt](LICENSE.txt) for details.
 
 ---
-![photo2](docs/photo2.png)
+
 ![photo3](docs/photo3.png)
