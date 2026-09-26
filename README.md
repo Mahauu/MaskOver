@@ -25,7 +25,7 @@ No hard-coded `P:\` map paths. On startup you choose an existing preset or creat
 - Middle-mouse on the full-mask preview picks the exact material colour
 - Terrain Builder **tile colour limit** checks (background)
 - Undo / Redo (**Ctrl+Z** / **Ctrl+Y**)
-- Export full mask (BMP / PNG) and export changes only (per-layer or combined)
+- Export full mask (BMP / PNG) and export changes only (per-layer or combined). Changed pixels are indexed in the background, so Export changes opens without a full-mask wait, and separate layer files are written from those pixels instead of copying the whole mask once per colour.
 - Map **presets** – switch maps without editing paths by hand
 - UI language per preset (**pl** / **en**)
 - Raycast is terrain-only – trees and buildings do not pull the brush off the ground

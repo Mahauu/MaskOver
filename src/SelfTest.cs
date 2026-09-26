@@ -177,6 +177,124 @@ namespace MaskOver
                             return 13;
                     }
                     mask.Flush();
+
+                    ChangeIndex exportIndex = ChangeIndex.Build(mask, originalMask, null);
+                    int blueCount = exportIndex == null ? -1 : exportIndex.CountOf(blue);
+                    if (exportIndex == null || exportIndex.Truncated || blueCount < 25 || exportIndex.CountOf(magenta) < 1)
+                        return 50;
+                    HashSet<int> selected = new HashSet<int>();
+                    selected.Add(blue);
+                    selected.Add(magenta);
+                    string blueBmp = Path.Combine(directory, "blue-only.bmp");
+                    ExportJob onlyBlue = new ExportJob();
+                    onlyBlue.Destination = blueBmp;
+                    onlyBlue.SingleColor = true;
+                    onlyBlue.Color = blue;
+                    List<ExportJob> blueJobs = new List<ExportJob>();
+                    blueJobs.Add(onlyBlue);
+                    if (FastExport.Write(mask, originalMask, originalMaskPath, exportIndex, 0, false, selected, blueJobs) != blueCount)
+                        return 51;
+                    using (BmpSurface check = new BmpSurface(blueBmp, false))
+                    {
+                        if (check.ReadPacked(64, 191) != blue || check.ReadPacked(60, 235) != 0 || check.ReadPacked(0, 0) != 0)
+                            return 52;
+                    }
+                    onlyBlue.Destination = Path.Combine(directory, "blue-only.png");
+                    FastExport.Write(mask, originalMask, originalMaskPath, exportIndex, 0, true, selected, blueJobs);
+                    using (Bitmap png = new Bitmap(onlyBlue.Destination))
+                    {
+                        Color pixel = png.GetPixel(64, 191);
+                        Color other = png.GetPixel(60, 235);
+                        if (pixel.R != 0 || pixel.G != 0 || pixel.B != 255 || other.R != 0 || other.G != 0 || other.B != 0)
+                            return 53;
+                    }
+                    onlyBlue.Destination = Path.Combine(directory, "white-bg.bmp");
+                    FastExport.Write(mask, originalMask, originalMaskPath, exportIndex, 1, false, selected, blueJobs);
+                    using (BmpSurface check = new BmpSurface(onlyBlue.Destination, false))
+                    {
+                        if (check.ReadPacked(0, 0) != 0xFFFFFF || check.ReadPacked(64, 191) != blue || check.ReadPacked(60, 235) != 0xFFFFFF)
+                            return 54;
+                    }
+                    onlyBlue.Destination = Path.Combine(directory, "white-bg.png");
+                    FastExport.Write(mask, originalMask, originalMaskPath, exportIndex, 1, true, selected, blueJobs);
+                    using (Bitmap png = new Bitmap(onlyBlue.Destination))
+                    {
+                        Color corner = png.GetPixel(0, 0);
+                        Color pixel = png.GetPixel(64, 191);
+                        if (corner.R != 255 || corner.G != 255 || corner.B != 255 || pixel.B != 255 || pixel.R != 0)
+                            return 55;
+                    }
+                    onlyBlue.Destination = Path.Combine(directory, "original-bg.bmp");
+                    FastExport.Write(mask, originalMask, originalMaskPath, exportIndex, 2, false, selected, blueJobs);
+                    using (BmpSurface check = new BmpSurface(onlyBlue.Destination, false))
+                    {
+                        if (check.ReadPacked(0, 0) != green || check.ReadPacked(64, 191) != blue)
+                            return 56;
+                    }
+                    ExportJob onlyMagenta = new ExportJob();
+                    onlyMagenta.Destination = Path.Combine(directory, "magenta-only.png");
+                    onlyMagenta.SingleColor = true;
+                    onlyMagenta.Color = magenta;
+                    List<ExportJob> both = new List<ExportJob>();
+                    onlyBlue.Destination = Path.Combine(directory, "split-blue.bmp");
+                    both.Add(onlyBlue);
+                    FastExport.Write(mask, originalMask, originalMaskPath, exportIndex, 0, false, selected, both);
+                    List<ExportJob> magentaJobs = new List<ExportJob>();
+                    magentaJobs.Add(onlyMagenta);
+                    FastExport.Write(mask, originalMask, originalMaskPath, exportIndex, 0, true, selected, magentaJobs);
+                    using (BmpSurface blueFile = new BmpSurface(onlyBlue.Destination, false))
+                    using (Bitmap magentaFile = new Bitmap(onlyMagenta.Destination))
+                    {
+                        Color pixel = magentaFile.GetPixel(60, 235);
+                        if (blueFile.ReadPacked(64, 191) != blue || blueFile.ReadPacked(60, 235) != 0)
+                            return 57;
+                        if (pixel.R != 255 || pixel.G != 0 || pixel.B != 255)
+                            return 58;
+                    }
+                    ExportJob combined = new ExportJob();
+                    combined.Destination = Path.Combine(directory, "combined.bmp");
+                    combined.SingleColor = false;
+                    List<ExportJob> combinedJobs = new List<ExportJob>();
+                    combinedJobs.Add(combined);
+                    FastExport.Write(mask, originalMask, originalMaskPath, exportIndex, 0, false, selected, combinedJobs);
+                    using (BmpSurface check = new BmpSurface(combined.Destination, false))
+                    {
+                        if (check.ReadPacked(64, 191) != blue || check.ReadPacked(60, 235) != magenta || check.ReadPacked(0, 0) != 0)
+                            return 59;
+                    }
+                    ChangeIndex forced = ChangeIndex.Build(mask, originalMask, null);
+                    forced.Truncated = true;
+                    forced.Pixels = null;
+                    onlyBlue.Destination = Path.Combine(directory, "scanned.bmp");
+                    List<ExportJob> scannedJobs = new List<ExportJob>();
+                    scannedJobs.Add(onlyBlue);
+                    FastExport.Write(mask, originalMask, originalMaskPath, forced, 0, false, selected, scannedJobs);
+                    using (BmpSurface check = new BmpSurface(onlyBlue.Destination, false))
+                    {
+                        if (check.ReadPacked(64, 191) != blue || check.ReadPacked(60, 235) != 0)
+                            return 60;
+                    }
+                    Dictionary<long, int> extra = new Dictionary<long, int>();
+                    int red = 255 << 16;
+                    mask.PaintSquare(10.0, 10.0, 1.0, 256.0, 256.0, red, extra);
+                    StrokeHistory synthetic = new StrokeHistory("test");
+                    foreach (KeyValuePair<long, int> pair in extra)
+                    {
+                        PixelDelta delta = new PixelDelta();
+                        delta.Offset = pair.Key;
+                        delta.Before = pair.Value;
+                        delta.After = mask.ReadPackedAtOffset(pair.Key);
+                        synthetic.Pixels.Add(delta);
+                    }
+                    exportIndex.ApplyHistory(synthetic, mask, originalMask, true);
+                    ChangeIndex rebuilt = ChangeIndex.Build(mask, originalMask, null);
+                    if (synthetic.Pixels.Count != 1 || exportIndex.CountOf(red) != 1 || rebuilt.CountOf(red) != 1 || exportIndex.CountOf(blue) != rebuilt.CountOf(blue))
+                        return 61;
+                    mask.WritePackedAtOffset(synthetic.Pixels[0].Offset, synthetic.Pixels[0].Before);
+                    exportIndex.ApplyHistory(synthetic, mask, originalMask, false);
+                    rebuilt = ChangeIndex.Build(mask, originalMask, null);
+                    if (exportIndex.CountOf(red) != 0 || rebuilt.CountOf(red) != 0 || exportIndex.CountOf(blue) != rebuilt.CountOf(blue))
+                        return 62;
                 }
 
                 WorldPosition position;

@@ -28,6 +28,7 @@
     <Compile Include="src\ExportChangesDialog.cs" />
     <Compile Include="src\PresetManager.cs" />
     <Compile Include="src\SelfTest.cs" />
+    <Compile Include="src\FastExport.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

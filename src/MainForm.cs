@@ -441,7 +441,9 @@ namespace MaskOver
         private int lastBrushSizeValue;
         private string strokeName;
         private readonly bool[] lastNumberKeys = new bool[9];
+        private bool interactionLocked;
         private bool terrainPreviewDirty = true;
+        private MaskChangeTracker changeTracker;
         private DateTime lastTerrainPreview = DateTime.MinValue;
         private double lastTerrainPreviewX = Double.NaN;
         private double lastTerrainPreviewZ = Double.NaN;
@@ -488,6 +490,7 @@ namespace MaskOver
             }
             if ((satellite != null && (mask.Width != satellite.Width || mask.Height != satellite.Height)) || mask.Width != originalMask.Width || mask.Height != originalMask.Height)
                 throw new InvalidDataException(T("Maska robocza, zrodlowa i satelita maja rozne wymiary.", "Working mask, source mask and satellite image have different dimensions."));
+            changeTracker = new MaskChangeTracker(mask, originalMask);
 
             bridge = new BridgePositionProvider(settings.BridgePath);
             Text = "MaskOver";
@@ -1136,6 +1139,8 @@ namespace MaskOver
 
         private void HandlePainting()
         {
+            if (interactionLocked)
+                return;
             bool foreground = NativeMethods.IsBuldozerForeground();
             bool altPressed = IsKeyPressed(VK_MENU) || IsKeyPressed(VK_LMENU) || IsKeyPressed(VK_RMENU);
             bool requested = paintingCheck.Checked && hasPosition && foreground && altPressed;
@@ -1176,6 +1181,7 @@ namespace MaskOver
             strokeActive = true;
             strokeOriginals = new Dictionary<long, int>();
             strokeName = eraserCheck.Checked ? T("Gumka", "Eraser") : layer.Name;
+            changeTracker.BeginStroke();
             lastPaintPosition = currentPosition;
             PaintAt(currentPosition);
         }
@@ -1252,10 +1258,13 @@ namespace MaskOver
                 redo.Clear();
                 while (undo.Count > 30)
                     TrimOldest(undo);
+                changeTracker.EndStroke(history);
                 statusLabel.Text = T("Pociagniecie: ", "Stroke: ") + history.LayerName + T(", piksele: ", ", pixels: ") + history.Pixels.Count;
                 mask.Flush();
                 maskTileColorCheckDirty = true;
             }
+            else
+                changeTracker.CancelStroke();
         }
 
         private static void TrimOldest(Stack<StrokeHistory> stack)
@@ -1268,12 +1277,13 @@ namespace MaskOver
 
         private void Undo()
         {
-            if (strokeActive || undo.Count == 0)
+            if (interactionLocked || strokeActive || undo.Count == 0)
                 return;
             StrokeHistory history = undo.Pop();
             foreach (PixelDelta delta in history.Pixels)
                 mask.WritePackedAtOffset(delta.Offset, delta.Before);
             redo.Push(history);
+            changeTracker.ApplyCommitted(history, false);
             lastPreview = DateTime.MinValue;
             terrainPreviewDirty = true;
             statusLabel.Text = T("Cofnieto: ", "Undone: ") + history.LayerName;
@@ -1281,12 +1291,13 @@ namespace MaskOver
 
         private void Redo()
         {
-            if (strokeActive || redo.Count == 0)
+            if (interactionLocked || strokeActive || redo.Count == 0)
                 return;
             StrokeHistory history = redo.Pop();
             foreach (PixelDelta delta in history.Pixels)
                 mask.WritePackedAtOffset(delta.Offset, delta.After);
             undo.Push(history);
+            changeTracker.ApplyCommitted(history, true);
             lastPreview = DateTime.MinValue;
             terrainPreviewDirty = true;
             statusLabel.Text = T("Ponowiono: ", "Redone: ") + history.LayerName;
@@ -1494,6 +1505,8 @@ namespace MaskOver
             {
                 if (strokeActive)
                     EndStroke();
+                if (changeTracker != null)
+                    changeTracker.Stop();
                 mask.Dispose();
                 mask = null;
                 if (File.Exists(settings.WorkingMaskPath))
@@ -1620,6 +1633,8 @@ namespace MaskOver
 
         private void Export()
         {
+            if (interactionLocked)
+                return;
             FlushWorking();
             using (SaveFileDialog dialog = new SaveFileDialog())
             {
@@ -1638,10 +1653,7 @@ namespace MaskOver
                 try
                 {
                     if (Path.GetExtension(destination).Equals(".png", StringComparison.OrdinalIgnoreCase))
-                    {
-                        using (Bitmap image = mask.ToBitmap())
-                            image.Save(destination, ImageFormat.Png);
-                    }
+                        FastExport.WriteSurfacePng(destination, mask);
                     else
                         ReplaceWithWorkingCopy(destination);
                     statusLabel.Text = T("Wyeksportowano: ", "Exported: ") + destination;
@@ -1659,24 +1671,44 @@ namespace MaskOver
 
         private void ExportChanges()
         {
+            if (interactionLocked)
+                return;
             FlushWorking();
-            List<TerrainLayer> usedLayers = new List<TerrainLayer>();
-            HashSet<int> changedColors = null;
-            using (BusyDialog busy = new BusyDialog(T("Analizowanie zmienionych pikseli...", "Scanning changed pixels...")))
+            if (strokeActive)
+                EndStroke();
+            interactionLocked = true;
+            try
             {
-                busy.Start(delegate { return mask.FindChangedColors(originalMask); });
-                busy.ShowDialog(this);
-                if (busy.Error != null)
-                {
-                    MessageBox.Show(this, busy.Error.Message, T("Eksport zmian", "Export changes"), MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-                changedColors = (HashSet<int>)busy.Result;
+                ExportChangesCore();
             }
+            finally
+            {
+                interactionLocked = false;
+            }
+        }
+
+        private void ExportChangesCore()
+        {
+            ChangeIndex index = changeTracker.TryGet();
+            if (index == null)
+            {
+                using (BusyDialog busy = new BusyDialog(T("Analizowanie zmienionych pikseli...", "Scanning changed pixels...")))
+                {
+                    busy.Start(delegate { return changeTracker.WaitForReady(); });
+                    busy.ShowDialog(this);
+                    if (busy.Error != null)
+                    {
+                        MessageBox.Show(this, busy.Error.Message, T("Eksport zmian", "Export changes"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                    index = (ChangeIndex)busy.Result;
+                }
+            }
+            List<TerrainLayer> usedLayers = new List<TerrainLayer>();
             foreach (TerrainLayer layer in layers)
             {
                 int color = (layer.Color.R << 16) | (layer.Color.G << 8) | layer.Color.B;
-                if (changedColors.Contains(color))
+                if (index.HasColor(color))
                     usedLayers.Add(layer);
             }
             if (usedLayers.Count == 0)
@@ -1691,7 +1723,7 @@ namespace MaskOver
                 ExportChangesOptions options = dialog.Options;
                 using (BusyDialog busy = new BusyDialog(T("Eksportowanie zmian...", "Exporting changes...")))
                 {
-                    busy.Start(delegate { return ExportSelectedChanges(options, usedLayers); });
+                    busy.Start(delegate { return ExportSelectedChanges(options, usedLayers, index); });
                     busy.ShowDialog(this);
                     if (busy.Error != null)
                     {
@@ -1707,9 +1739,9 @@ namespace MaskOver
             }
         }
 
-        private long ExportSelectedChanges(ExportChangesOptions options, List<TerrainLayer> usedLayers)
+        private long ExportSelectedChanges(ExportChangesOptions options, List<TerrainLayer> usedLayers, ChangeIndex index)
         {
-            long totalChanged = 0;
+            List<ExportJob> jobs = new List<ExportJob>();
             if (options.SeparateLayers)
             {
                 foreach (TerrainLayer layer in usedLayers)
@@ -1717,40 +1749,21 @@ namespace MaskOver
                     int color = (layer.Color.R << 16) | (layer.Color.G << 8) | layer.Color.B;
                     if (!options.Colors.Contains(color))
                         continue;
-                    HashSet<int> oneColor = new HashSet<int>();
-                    oneColor.Add(color);
-                    string destination = Path.Combine(GetPresetDirectory(), SafeExportName(options.BaseName + "_" + layer.Name) + (options.Png ? ".png" : ".bmp"));
-                    totalChanged += ExportChangesFile(destination, oneColor, options.BackgroundMode, options.Png);
+                    ExportJob job = new ExportJob();
+                    job.Destination = Path.Combine(GetPresetDirectory(), SafeExportName(options.BaseName + "_" + layer.Name) + (options.Png ? ".png" : ".bmp"));
+                    job.SingleColor = true;
+                    job.Color = color;
+                    jobs.Add(job);
                 }
             }
             else
             {
-                string destination = Path.Combine(GetPresetDirectory(), SafeExportName(options.BaseName) + (options.Png ? ".png" : ".bmp"));
-                totalChanged = ExportChangesFile(destination, options.Colors, options.BackgroundMode, options.Png);
+                ExportJob job = new ExportJob();
+                job.Destination = Path.Combine(GetPresetDirectory(), SafeExportName(options.BaseName) + (options.Png ? ".png" : ".bmp"));
+                job.SingleColor = false;
+                jobs.Add(job);
             }
-            return totalChanged;
-        }
-
-        private long ExportChangesFile(string destination, HashSet<int> colors, int backgroundMode, bool png)
-        {
-            string temporary = Path.Combine(GetPresetDirectory(), ".maskover_export.tmp.bmp");
-            if (File.Exists(temporary)) File.Delete(temporary);
-            File.Copy(settings.WorkingMaskPath, temporary, true);
-            long changed;
-            using (BmpSurface output = new BmpSurface(temporary, true))
-                changed = mask.WriteSelectedDifferencesAgainst(originalMask, output, colors, backgroundMode);
-            if (png)
-            {
-                using (BmpSurface exported = new BmpSurface(temporary, false))
-                using (Bitmap image = exported.ToBitmap())
-                    image.Save(destination, ImageFormat.Png);
-                File.Delete(temporary);
-            }
-            else
-            {
-                ReplaceFile(temporary, destination);
-            }
-            return changed;
+            return FastExport.Write(mask, originalMask, settings.MaskPath, index, options.BackgroundMode, options.Png, options.Colors, jobs);
         }
 
         private void ReplaceWithWorkingCopy(string destination)
@@ -1803,6 +1816,8 @@ namespace MaskOver
         {
             timer.Stop();
             wheelHook.Dispose();
+            if (changeTracker != null)
+                changeTracker.Stop();
             showBuldozerBrushCheck.Checked = false;
             WriteBrushState();
             showTerrainPreviewCheck.Checked = false;

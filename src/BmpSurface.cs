@@ -104,23 +104,94 @@ namespace MaskOver
 
         public HashSet<int> FindChangedColors(BmpSurface original)
         {
+            HashSet<int> colors = new HashSet<int>();
+            VisitChanges(original, delegate(int x, int y, int color) { colors.Add(color); }, null);
+            return colors;
+        }
+
+        public delegate void PixelChangeAction(int x, int y, int color);
+
+        /*
+         * One sequential pass. Identical rows are compared 8 bytes at a time and skipped,
+         * so a small painted area does not turn into hundreds of millions of method calls.
+         */
+        public bool VisitChanges(BmpSurface original, PixelChangeAction visitor, Func<bool> cancel)
+        {
             if (original.Width != Width || original.Height != Height)
                 throw new InvalidDataException(Locale.T("Maska robocza i oryginalna mają różne wymiary.", "The working and original masks have different dimensions."));
-            HashSet<int> colors = new HashSet<int>();
-            for (int y = 0; y < Height; y++)
+            if (visitor == null)
+                return false;
+            for (int fileRow = 0; fileRow < Height; fileRow++)
             {
-                long currentOffset = OffsetFromTop(0, y);
-                long originalOffset = original.OffsetFromTop(0, y);
+                if ((fileRow & 63) == 0 && cancel != null && cancel())
+                    return true;
+                byte* currentRow = pointer + pixelOffset + ((long)fileRow * stride);
+                byte* originalRow = original.pointer + original.pixelOffset + ((long)fileRow * original.stride);
+                int compareLength = stride < original.stride ? stride : original.stride;
+                int pixelBytes = Width * 3;
+                if (pixelBytes < compareLength)
+                    compareLength = pixelBytes;
+                if (RowsEqual(currentRow, originalRow, compareLength))
+                    continue;
+                int y = Height - 1 - fileRow;
+                byte* currentPixel = currentRow;
+                byte* originalPixel = originalRow;
                 for (int x = 0; x < Width; x++)
                 {
-                    int currentColor = ReadPackedAtOffset(currentOffset);
-                    if (currentColor != original.ReadPackedAtOffset(originalOffset))
-                        colors.Add(currentColor);
-                    currentOffset += 3;
-                    originalOffset += 3;
+                    if (currentPixel[0] != originalPixel[0] || currentPixel[1] != originalPixel[1] || currentPixel[2] != originalPixel[2])
+                    {
+                        int color = (currentPixel[2] << 16) | (currentPixel[1] << 8) | currentPixel[0];
+                        visitor(x, y, color);
+                    }
+                    currentPixel += 3;
+                    originalPixel += 3;
                 }
             }
-            return colors;
+            return cancel != null && cancel();
+        }
+
+        public void DecodeOffset(long offset, out int x, out int yFromTop)
+        {
+            long relative = offset - pixelOffset;
+            int fileRow = (int)(relative / stride);
+            x = (int)((relative % stride) / 3);
+            yFromTop = Height - 1 - fileRow;
+        }
+
+        public void CopyPngRow(int yFromTop, byte[] row)
+        {
+            row[0] = 0;
+            byte* source = pointer + OffsetFromTop(0, yFromTop);
+            fixed (byte* pinned = row)
+            {
+                byte* destination = pinned + 1;
+                for (int x = 0; x < Width; x++)
+                {
+                    destination[0] = source[2];
+                    destination[1] = source[1];
+                    destination[2] = source[0];
+                    destination += 3;
+                    source += 3;
+                }
+            }
+        }
+
+        private static bool RowsEqual(byte* left, byte* right, int length)
+        {
+            int chunks = length >> 3;
+            for (int index = 0; index < chunks; index++)
+            {
+                ulong leftValue = *(ulong*)(left + (index << 3));
+                ulong rightValue = *(ulong*)(right + (index << 3));
+                if (leftValue != rightValue)
+                    return false;
+            }
+            for (int index = chunks << 3; index < length; index++)
+            {
+                if (left[index] != right[index])
+                    return false;
+            }
+            return true;
         }
 
         public long WriteSelectedDifferencesAgainst(BmpSurface original, BmpSurface output, HashSet<int> selectedColors, int backgroundMode)
