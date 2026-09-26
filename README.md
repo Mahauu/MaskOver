@@ -1,3 +1,5 @@
+This tool was created with the assistance of AI.
+
 # MaskOver for DayZ Terrain Builder
 
 **MaskOver** is a portable Windows overlay for painting a Terrain Builder surface mask while the target point is selected in Buldozer. It reads the world position from a small script bridge, shows a satellite/mask preview, and paints a safe working copy of the source BMP.
