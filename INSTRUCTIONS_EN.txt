@@ -1,0 +1,42 @@
+MaskOver – installation
+
+1. Build with build.ps1 (produces bin\MaskOver.exe) or download a Release binary.
+2. Keep MaskOver.exe and the Buldozer script together as needed.
+3. On startup select an existing preset or create one. The working mask copy is
+   stored under presets\ next to the EXE. The source mask, layers.cfg and
+   satellite are referenced at their selected paths and are not copied.
+4. Install the included buldozer.c as P:\scripts\buldozer.c if you do not
+   already have a custom Buldozer script. If you do, merge the MaskOver bridge
+   (see buldozer_bridge.c) into your existing script instead of replacing it.
+5. During preset creation select the actual Buldozer profile directory used
+   by $profile:. The bridge files are written there.
+6. Start MaskOver and Buldozer, then press F10 in Buldozer.
+
+Controls:
+- Hold ALT while Buldozer is active to paint.
+- Use the mouse wheel to change brush size: 1, 2, 4, 8, 16, 32, 64, 128, 256 px.
+- Press E to toggle the eraser.
+- Hold + or - to zoom the preview; Num0 resets zoom.
+- Ctrl+Z and Ctrl+Y undo and redo.
+- F6 exports the full mask as BMP or PNG; F7 opens the changes-export options.
+- F9 toggles the painted terrain preview; Page Up / Page Down adjust its range
+  by 10 m (10–150 m).
+- Change preset restarts the program and opens the preset selector.
+- Enable Full mask in range to send all mask colours around the current
+  Buldozer position. The radius is controlled by the range field. Middle mouse
+  button on the preview selects the matching material colour.
+- Enable Check tile colors to check the current Terrain Builder mask tile in
+  the background. The first time this is enabled in a preset, MaskOver asks for
+  tile size, actual overlap, tiles in row and maximum colours per tile.
+- Clear working mask warns before replacing the cached mask with the source;
+  painted changes are lost after confirmation.
+
+Full-mask export supports BMP and PNG. Export changes lets you choose the
+background, used layers with colour swatches, and one combined file or separate
+files per layer.
+
+The terrain preview shows changed pixels within the selected range. Complete
+aligned same-colour blocks are combined; mixed areas keep exact pixel coverage.
+
+Source mask, satellite image and layers.cfg are not included. Each user must
+provide them when creating a preset.

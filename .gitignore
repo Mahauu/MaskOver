@@ -1,0 +1,25 @@
+# Build output
+bin/
+dist/
+obj/
+*.exe
+*.pdb
+*.dll
+*.user
+*.suo
+*.cache
+
+# Local runtime data
+presets/
+active_preset.txt
+*.log
+startup.log
+
+# IDE / OS
+.vs/
+.vscode/
+*.swp
+*~
+Thumbs.db
+Desktop.ini
+.DS_Store

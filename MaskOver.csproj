@@ -1,0 +1,33 @@
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>MaskOver</RootNamespace>
+    <AssemblyName>MaskOver</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <PlatformTarget>x64</PlatformTarget>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>5</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="src\Program.cs" />
+    <Compile Include="src\Locale.cs" />
+    <Compile Include="src\Models.cs" />
+    <Compile Include="src\BmpSurface.cs" />
+    <Compile Include="src\PositionProviders.cs" />
+    <Compile Include="src\MainForm.cs" />
+    <Compile Include="src\MaskTileSettingsDialog.cs" />
+    <Compile Include="src\BusyDialog.cs" />
+    <Compile Include="src\ExportChangesDialog.cs" />
+    <Compile Include="src\PresetManager.cs" />
+    <Compile Include="src\SelfTest.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

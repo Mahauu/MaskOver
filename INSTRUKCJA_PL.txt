@@ -1,0 +1,48 @@
+MaskOver – instalacja
+
+1. Skompiluj build.ps1 (powstanie bin\MaskOver.exe) albo pobierz gotowy build z Releases.
+2. Uruchom MaskOver.exe i wybierz istniejący preset albo utwórz nowy.
+   Kopia robocza maski trafia do presets\<nazwa>\ obok EXE. Źródłowa maska,
+   layers.cfg i satelita pozostają pod wskazanymi ścieżkami i nie są kopiowane
+   (poza jednorazową kopią roboczą maski).
+3. Zainstaluj dołączony buldozer.c jako P:\scripts\buldozer.c, jeśli nie masz
+   własnego skryptu Buldozera. Jeśli masz – wklej most MaskOver (zob.
+   buldozer_bridge.c) do istniejącego skryptu zamiast go nadpisywać.
+4. Przy tworzeniu presetu wskaż rzeczywisty katalog profilu Buldozera ($profile:).
+   Pliki mostu są tam zapisywane.
+5. Uruchom MaskOver i Buldozer, potem wciśnij F10 w Buldozerze
+   (po każdym restarcie Buldozera ponownie F10).
+
+Język interfejsu jest zapisany w presecie. Nowe presety startują po polsku;
+ustaw Language=en w konfiguracji presetu dla angielskiego UI.
+
+Sterowanie:
+- Przytrzymaj ALT przy aktywnym Buldozerze: malowanie
+- Rolka myszy: rozmiar pędzla 1, 2, 4, 8, 16, 32, 64, 128, 256 px
+- [ / ]: zmniejsz / zwiększ rozmiar o jeden krok
+- E: gumka (przywraca piksele z oryginalnej maski źródłowej)
+- Przytrzymaj + lub -: płynny zoom podglądu; Num0: reset zoomu
+- Ctrl+Z / Ctrl+Y: cofnij / ponów
+- F6: eksport pełnej maski (BMP lub PNG)
+- F7: dialog eksportu zmian
+- F9: podgląd namalowanych zmian na terenie w Buldozerze
+- F10: przeładuj skrypt Buldozera po restarcie
+- Środkowy przycisk myszy na podglądzie pełnej maski: wybór dokładnego koloru materiału
+
+Opcje w oknie:
+- Obracaj z kamerą – góra podglądu zgodna z kierunkiem kamery Buldozera
+- Pełna maska w zasięgu – wszystkie kolory wokół pozycji (promień = pole zasięgu)
+- Pokaż obrys pędzla w Buldozerze
+- Pokaż namalowaną maskę w Buldozerze – zmienione piksele w zasięgu 10–150 m;
+  pełne bloki tego samego koloru łączą się w większe kwadraty
+- Sprawdzaj kolory kafelków – kontrola limitu kolorów Terrain Builder w tle
+  (przy pierwszym włączeniu w presecie: rozmiar kafelka, overlap, liczba w rzędzie, max kolorów)
+- Wyczyść maskę roboczą – po potwierdzeniu zastępuje cache kopią źródłowej maski
+- Zmień preset – restart i wybór innej mapy
+
+Eksport pełnej maski: BMP lub PNG.
+Eksport zmian: wybór tła (czarne / białe / oryginalna maska), warstw ze swatchami
+kolorów oraz jednego pliku lub osobnych plików na warstwę.
+
+Program nie zawiera maski, satelity ani layers.cfg – każdy użytkownik wskazuje
+własne pliki przy tworzeniu presetu.
