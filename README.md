@@ -37,7 +37,7 @@ No hard-coded `P:\` map paths. On startup you choose an existing preset or creat
 - Windows (x64)
 - .NET Framework 4.8 (usually already present on modern Windows)
 - DayZ Tools / Terrain Builder + Buldozer
-- Your own 24-bit surface mask BMP, `layers.cfg`, and optionally a satellite BMP
+- Your own 24-bit surface mask (BMP / PNG), `layers.cfg`, and optionally a satellite (BMP / PNG)
 
 The repository does **not** include map data. You supply mask / layers / satellite when creating a preset.
 
