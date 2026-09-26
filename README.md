@@ -139,7 +139,7 @@ MaskOver/
 ├── buldozer_bridge.c     Bridge-only snippet for merging into an existing script
 ├── INSTRUCTIONS_EN.txt   Short English install + controls
 ├── INSTRUKCJA_PL.txt     Short Polish install + controls
-├── LICENSE               MIT
+├── LICENSE               
 └── README.md
 ```
 
