@@ -21,7 +21,6 @@ No hard-coded `P:\` map paths. On startup you choose an existing preset or creat
 - Mask preview with zoom (**10–4000 m**), optional camera-aligned rotation
 - Live brush outline drawn on the terrain
 - Painted-mask preview in Buldozer (**F9**, range 10–150 m) with block merging for solid areas
-- **Full mask in range** – send all mask colours around the cursor
 - Middle-mouse on the full-mask preview picks the exact material colour
 - Terrain Builder **tile colour limit** checks (background)
 - Undo / Redo (**Ctrl+Z** / **Ctrl+Y**)
