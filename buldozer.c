@@ -110,8 +110,13 @@ class MaskOverCursorBridge
 		if (!m_BrushVisible)
 			return;
 
+		#ifdef DAYZ_1_30
 		int primaryColor = COLOR_CYAN;
 		int accentColor = COLOR_MAGENTA;
+		#else
+		int primaryColor = COLOR_GREEN;
+		int accentColor = COLOR_BLUE;
+		#endif
 		if (m_BrushEraser)
 		{
 			primaryColor = COLOR_YELLOW;
