@@ -99,7 +99,6 @@ Language for a new preset defaults to Polish; set `Language=en` in the preset co
 Other UI options:
 
 - **Rotate with camera** – preview top matches Buldozer heading  
-- **Full mask in range** – all colours around current position (radius = preview range)  
 - **Show brush outline in Buldozer**  
 - **Show painted mask in Buldozer** – changed pixels in 10–150 m range; solid same-colour blocks merge into larger squares  
 - **Check tile colors** – background check against Terrain Builder tile limits (configured once per preset)  
